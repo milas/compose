@@ -65,6 +65,8 @@ type CLI struct {
 	// HomeDir for tools that look for user files (set as HOME)
 	HomeDir string
 
+	WorkDir string
+
 	// env overrides to apply to every invoked command
 	//
 	// To populate, use WithEnv when creating a CLI instance.
@@ -198,6 +200,7 @@ func (c *CLI) NewCmd(command string, args ...string) icmd.Cmd {
 	return icmd.Cmd{
 		Command: append([]string{command}, args...),
 		Env:     append(c.BaseEnvironment(), c.env...),
+		Dir:     c.WorkDir,
 	}
 }
 
@@ -209,6 +212,7 @@ func (c *CLI) NewCmdWithEnv(envvars []string, command string, args ...string) ic
 	return icmd.Cmd{
 		Command: append([]string{command}, args...),
 		Env:     cmdEnv,
+		Dir:     c.WorkDir,
 	}
 }
 

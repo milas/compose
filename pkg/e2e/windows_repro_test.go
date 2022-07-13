@@ -23,20 +23,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/compose-spec/compose-go/consts"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
 	"gotest.tools/v3/icmd"
 )
 
 func TestWindowsRepro(t *testing.T) {
-	const projectName = "win-repro"
-	c := NewParallelCLI(
-		t, WithEnv(
-			consts.ComposeProjectName+"="+projectName,
-			consts.ComposeFilePath+"="+"./fixtures/win-repro/compose.yaml",
-		),
-	)
+	c := NewParallelCLI(t)
+	c.WorkDir = "./fixtures/win-repro"
 
 	resetState := func() {
 		c.RunDockerComposeCmdNoCheck(t, "down", "-t", "0")
@@ -58,8 +52,8 @@ func TestWindowsRepro(t *testing.T) {
 		func() error {
 			res := icmd.RunCmd(cmd)
 			t.Logf(
-				"EXIT CODE: %d\nERR: %v\nOUTPUT:\n====%s\n====\n",
-				res.ExitCode, res.Error, res.Combined(),
+				"UP DONE!\nEXIT CODE: %d\nERR: %v\nOUTPUT:\n====\n%s\n====\n",
+				res.ExitCode, res.Error, strings.TrimSpace(res.Combined()),
 			)
 			return res.Error
 		},
@@ -69,11 +63,17 @@ func TestWindowsRepro(t *testing.T) {
 	require.Eventuallyf(
 		t, func() bool {
 			return strings.Contains(stdout.String(), "hello")
-		}, 5*time.Second, 50*time.Millisecond, "container didn't log `hello`:\n====%s\n====", stdout,
+		}, 5*time.Second, 50*time.Millisecond,
+		"container didn't log `hello`:\n====\n%s\n====",
+		stdout,
 	)
 
 	t.Log("=> running compose down")
-	c.RunDockerComposeCmd(t, "down", "-t", "0")
+	res := c.RunDockerComposeCmd(t, "down")
+	t.Logf(
+		"DOWN DONE!\nEXIT CODE: %d\nERR: %v\nOUTPUT:\n====\n%s\n====\n",
+		res.ExitCode, res.Error, strings.TrimSpace(res.Combined()),
+	)
 
 	t.Log("=> waiting for compose up to exit")
 	require.NoError(t, g.Wait(), "up returned error")
@@ -93,5 +93,5 @@ func (b *buffer) Write(p []byte) (n int, err error) {
 func (b *buffer) String() string {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
-	return b.buf.String()
+	return strings.TrimSpace(b.buf.String())
 }
