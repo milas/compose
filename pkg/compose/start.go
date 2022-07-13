@@ -19,10 +19,12 @@ package compose
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/compose-spec/compose-go/types"
 	moby "github.com/docker/docker/api/types"
+	"github.com/docker/docker/errdefs"
 	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
 
@@ -59,13 +61,26 @@ func (s *composeService) start(ctx context.Context, projectName string, options 
 		}
 
 		eg.Go(func() error {
-			return s.watchContainers(context.Background(), project.Name, options.AttachTo, listener, attached, func(container moby.Container) error {
+			err := s.watchContainers(context.Background(), project.Name, options.AttachTo, listener, attached, func(container moby.Container) error {
 				err := s.attachContainer(ctx, container, listener)
 				if err != nil {
 					return fmt.Errorf("attachContainer: %w", err)
 				}
 				return nil
 			})
+			var nf interface {
+				errdefs.ErrNotFound
+				Error() string
+			}
+
+			if errdefs.IsNotFound(err) || errors.Is(err, nf) {
+				fmt.Fprintf(os.Stderr, "watchContainers: skipped not found: %v\n", err)
+				return nil
+			}
+			if err != nil {
+				return fmt.Errorf("watchContainers: %w", err)
+			}
+			return nil
 		})
 	}
 
