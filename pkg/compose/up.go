@@ -35,15 +35,18 @@ func (s *composeService) Up(ctx context.Context, project *types.Project, options
 	err := progress.Run(ctx, func(ctx context.Context) error {
 		err := s.create(ctx, project, options.Create)
 		if err != nil {
-			return err
+			return fmt.Errorf("create: %w", err)
 		}
 		if options.Start.Attach == nil {
-			return s.start(ctx, project.Name, options.Start, nil)
+			err = s.start(ctx, project.Name, options.Start, nil)
+			if err != nil {
+				return fmt.Errorf("start via create: %w", err)
+			}
 		}
 		return nil
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("init: %w", err)
 	}
 
 	if options.Start.Attach == nil {
@@ -57,18 +60,29 @@ func (s *composeService) Up(ctx context.Context, project *types.Project, options
 
 	stopFunc := func() error {
 		ctx := context.Background()
-		return progress.Run(ctx, func(ctx context.Context) error {
-			go func() {
-				<-signalChan
-				s.Kill(ctx, project.Name, api.KillOptions{ // nolint:errcheck
-					Services: project.ServiceNames(),
-				})
-			}()
+		err := progress.Run(
+			ctx, func(ctx context.Context) error {
+				go func() {
+					<-signalChan
+					s.Kill(
+						ctx, project.Name, api.KillOptions{
+							// nolint:errcheck
+							Services: project.ServiceNames(),
+						},
+					)
+				}()
 
-			return s.Stop(ctx, project.Name, api.StopOptions{
-				Services: project.ServiceNames(),
-			})
-		})
+				return s.Stop(
+					ctx, project.Name, api.StopOptions{
+						Services: project.ServiceNames(),
+					},
+				)
+			},
+		)
+		if err != nil {
+			return fmt.Errorf("stopFunc: %w", err)
+		}
+		return nil
 	}
 	go func() {
 		<-signalChan
@@ -82,12 +96,15 @@ func (s *composeService) Up(ctx context.Context, project *types.Project, options
 	eg.Go(func() error {
 		code, err := printer.Run(context.Background(), options.Start.CascadeStop, options.Start.ExitCodeFrom, stopFunc)
 		exitCode = code
-		return err
+		if err != nil {
+			return fmt.Errorf("printer: %w", err)
+		}
+		return nil
 	})
 
 	err = s.start(ctx, project.Name, options.Start, printer.HandleEvent)
 	if err != nil {
-		return err
+		return fmt.Errorf("start: %w", err)
 	}
 
 	err = eg.Wait()
@@ -98,5 +115,8 @@ func (s *composeService) Up(ctx context.Context, project *types.Project, options
 		}
 		return cli.StatusError{StatusCode: exitCode, Status: errMsg}
 	}
-	return err
+	if err != nil {
+		return fmt.Errorf("fn end: %w", err)
+	}
+	return nil
 }

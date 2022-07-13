@@ -42,7 +42,6 @@ func TestWindowsRepro(t *testing.T) {
 
 	stdout := &buffer{}
 	cmd := c.NewDockerComposeCmd(t, "up")
-	cmd.Timeout = 5 * time.Second
 	cmd.Stdout = stdout
 
 	t.Log("=> running compose up")
@@ -63,13 +62,13 @@ func TestWindowsRepro(t *testing.T) {
 	require.Eventuallyf(
 		t, func() bool {
 			return strings.Contains(stdout.String(), "hello")
-		}, 5*time.Second, 50*time.Millisecond,
+		}, 10*time.Second, 150*time.Millisecond,
 		"container didn't log `hello`:\n====\n%s\n====",
 		stdout,
 	)
 
 	t.Log("=> running compose down")
-	res := c.RunDockerComposeCmd(t, "down")
+	res := c.RunDockerComposeCmd(t, "down", "-t", "1")
 	t.Logf(
 		"DOWN DONE!\nEXIT CODE: %d\nERR: %v\nOUTPUT:\n====\n%s\n====\n",
 		res.ExitCode, res.Error, strings.TrimSpace(res.Combined()),
