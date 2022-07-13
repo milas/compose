@@ -18,6 +18,7 @@ package compose
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/compose-spec/compose-go/types"
@@ -41,12 +42,12 @@ func (s *composeService) start(ctx context.Context, projectName string, options 
 		var containers Containers
 		containers, err := s.getContainers(ctx, projectName, oneOffExclude, true)
 		if err != nil {
-			return err
+			return fmt.Errorf("getContainers: %w", err)
 		}
 
 		project, err = s.projectFromName(containers, projectName, options.AttachTo...)
 		if err != nil {
-			return err
+			return fmt.Errorf("projectFromName: %w", err)
 		}
 	}
 
@@ -54,12 +55,16 @@ func (s *composeService) start(ctx context.Context, projectName string, options 
 	if listener != nil {
 		attached, err := s.attach(ctx, project, listener, options.AttachTo)
 		if err != nil {
-			return err
+			return fmt.Errorf("attach: %w", err)
 		}
 
 		eg.Go(func() error {
 			return s.watchContainers(context.Background(), project.Name, options.AttachTo, listener, attached, func(container moby.Container) error {
-				return s.attachContainer(ctx, container, listener)
+				err := s.attachContainer(ctx, container, listener)
+				if err != nil {
+					return fmt.Errorf("attachContainer: %w", err)
+				}
+				return nil
 			})
 		})
 	}
@@ -67,13 +72,17 @@ func (s *composeService) start(ctx context.Context, projectName string, options 
 	err := InDependencyOrder(ctx, project, func(c context.Context, name string) error {
 		service, err := project.GetService(name)
 		if err != nil {
-			return err
+			return fmt.Errorf("getService: %w", err)
 		}
 
-		return s.startService(ctx, project, service)
+		err = s.startService(ctx, project, service)
+		if err != nil {
+			return fmt.Errorf("startService: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("inDepOrder: %w", err)
 	}
 
 	if options.Wait {
@@ -85,11 +94,15 @@ func (s *composeService) start(ctx context.Context, projectName string, options 
 		}
 		err = s.waitDependencies(ctx, project, depends)
 		if err != nil {
-			return err
+			return fmt.Errorf("waitDependencies: %w", err)
 		}
 	}
 
-	return eg.Wait()
+	err = eg.Wait()
+	if err != nil {
+		return fmt.Errorf("errgroup/wait: %w", err)
+	}
+	return nil
 }
 
 type containerWatchFn func(container moby.Container) error
