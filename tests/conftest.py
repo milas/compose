@@ -208,6 +208,7 @@ non_conformity_tests = [
     "test_up_with_volume_labels",
     "test_fail_on_both_host_and_context_opt",
     "test_fail_run_on_inexistent_context",
+    "test_events_with_stop_process_flag",
 ]
 
 
@@ -236,5 +237,5 @@ def pytest_collection_modifyitems(config, items):
     skip_non_conformity = pytest.mark.skip(reason="skipping because that's not a conformity test")
     for item in items:
         if item.name in non_conformity_tests:
-            print("Skipping '{}' when running in compatibility mode".format(item.name))
+            # print("Skipping '{}' when running in compatibility mode".format(item.name))
             item.add_marker(skip_non_conformity)

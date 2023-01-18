@@ -1,3 +1,5 @@
 #!/usr/bin/env bash
 
-pytest --conformity --binary ${1:-docker-compose} tests/acceptance/
+echo "${1:-docker-compose-v1}"
+
+pytest -v -rf --conformity --binary "${1:-docker-compose-v1}" tests/acceptance/ -k "${2}"

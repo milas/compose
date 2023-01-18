@@ -31,6 +31,7 @@ from tests.integration.testcases import no_cluster
 from tests.integration.testcases import pull_busybox
 from tests.integration.testcases import SWARM_SKIP_RM_VOLUMES
 
+
 DOCKER_COMPOSE_EXECUTABLE = 'docker-compose'
 
 ProcessResult = namedtuple('ProcessResult', 'stdout stderr')
@@ -60,8 +61,12 @@ COMPOSE_COMPATIBILITY_DICT = {
 
 def start_process(base_dir, options, executable=None, env=None):
     executable = executable or DOCKER_COMPOSE_EXECUTABLE
+    args = ["docker-compose-v1"] + options
+
+    print("About to run args: %s" % args)
     proc = subprocess.Popen(
-        [executable] + options,
+        # [executable] + options,
+        args,
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
