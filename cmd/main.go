@@ -17,6 +17,8 @@
 package main
 
 import (
+	"context"
+	"log"
 	"os"
 
 	dockercli "github.com/docker/cli/cli"
@@ -24,20 +26,34 @@ import (
 	"github.com/docker/cli/cli-plugins/plugin"
 	"github.com/docker/cli/cli/command"
 	"github.com/spf13/cobra"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/docker/compose/v2/cmd/compatibility"
 	commands "github.com/docker/compose/v2/cmd/compose"
 	"github.com/docker/compose/v2/internal"
 	"github.com/docker/compose/v2/pkg/api"
 	"github.com/docker/compose/v2/pkg/compose"
+	"github.com/docker/compose/v2/pkg/utils"
 )
 
 func pluginMain() {
 	plugin.Run(func(dockerCli command.Cli) *cobra.Command {
-		serviceProxy := api.NewServiceProxy().WithService(compose.NewComposeService(dockerCli))
+		tracingShutdown, err := commands.InitProvider()
+		if err != nil {
+			log.Fatal(err)
+		}
+		var cmdSpan trace.Span
+
+		serviceProxy := api.NewServiceProxy().WithService(compose.NewComposeService(dockerCli, utils.Tracer))
 		cmd := commands.RootCommand(dockerCli, serviceProxy)
 		originalPreRun := cmd.PersistentPreRunE
 		cmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+			ctx, cmdSpan = utils.Tracer.Start(ctx, "CLICommand",
+				trace.WithAttributes(
+					attribute.String("cmd", cmd.Name())))
+			cmd.SetContext(ctx)
 			if err := plugin.PersistentPreRunE(cmd, args); err != nil {
 				return err
 			}
@@ -45,6 +61,20 @@ func pluginMain() {
 				return originalPreRun(cmd, args)
 			}
 			return nil
+		}
+		originalPostRun := cmd.PersistentPostRunE
+		cmd.PersistentPostRunE = func(cmd *cobra.Command, args []string) error {
+			var err error
+			if originalPostRun != nil {
+				err = originalPostRun(cmd, args)
+			}
+			if cmdSpan != nil {
+				cmdSpan.End()
+			}
+			if err := tracingShutdown(context.Background()); err != nil {
+				log.Fatal(err)
+			}
+			return err
 		}
 		cmd.SetFlagErrorFunc(func(c *cobra.Command, err error) error {
 			return dockercli.StatusError{

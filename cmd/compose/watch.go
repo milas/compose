@@ -21,8 +21,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/docker/compose/v2/pkg/api"
 	"github.com/spf13/cobra"
+
+	"github.com/docker/compose/v2/pkg/api"
 )
 
 type watchOptions struct {
@@ -52,7 +53,7 @@ func watchCommand(p *ProjectOptions, backend api.Service) *cobra.Command {
 
 func runWatch(ctx context.Context, backend api.Service, opts watchOptions, services []string) error {
 	fmt.Fprintln(os.Stderr, "watch command is EXPERIMENTAL")
-	project, err := opts.ToProject(nil)
+	project, err := opts.ToProject(context.TODO(), nil)
 	if err != nil {
 		return err
 	}

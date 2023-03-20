@@ -17,10 +17,12 @@
 package compose
 
 import (
+	context2 "context"
 	"strings"
 
-	"github.com/docker/compose/v2/pkg/api"
 	"github.com/spf13/cobra"
+
+	"github.com/docker/compose/v2/pkg/api"
 )
 
 // validArgsFn defines a completion func to be returned to fetch completion options
@@ -34,7 +36,7 @@ func noCompletion() validArgsFn {
 
 func completeServiceNames(p *ProjectOptions) validArgsFn {
 	return func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-		project, err := p.ToProject(nil)
+		project, err := p.ToProject(context2.TODO(), nil)
 		if err != nil {
 			return nil, cobra.ShellCompDirectiveNoFileComp
 		}

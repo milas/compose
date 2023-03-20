@@ -35,15 +35,18 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/opencontainers/go-digest"
 	"github.com/pkg/errors"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	"gopkg.in/yaml.v2"
 
 	"github.com/docker/compose/v2/pkg/api"
 )
 
 // NewComposeService create a local implementation of the compose.Service API
-func NewComposeService(dockerCli command.Cli) api.Service {
+func NewComposeService(dockerCli command.Cli, tracer trace.Tracer) api.Service {
 	return &composeService{
 		dockerCli:      dockerCli,
+		tracer: tracer,
 		maxConcurrency: -1,
 		dryRun:         false,
 	}
@@ -51,6 +54,7 @@ func NewComposeService(dockerCli command.Cli) api.Service {
 
 type composeService struct {
 	dockerCli      command.Cli
+	tracer         trace.Tracer
 	maxConcurrency int
 	dryRun         bool
 }
@@ -123,11 +127,17 @@ func getContainerNameWithoutProject(c moby.Container) string {
 
 func (s *composeService) Config(ctx context.Context, project *types.Project, options api.ConfigOptions) ([]byte, error) {
 	if options.ResolveImageDigests {
+		ctx, span := s.tracer.Start(ctx, "ResolveImages")
+		defer span.End()
+
 		info, err := s.apiClient().Info(ctx)
 		if err != nil {
 			return nil, err
 		}
 		err = project.ResolveImages(func(named reference.Named) (digest.Digest, error) {
+			ctx, iSpan := s.tracer.Start(ctx, "ResolveImage",
+				trace.WithAttributes(attribute.String("reference", named.String())))
+			defer iSpan.End()
 			auth, err := encodedAuth(named, info, s.configFile())
 			if err != nil {
 				return "", err
@@ -141,8 +151,11 @@ func (s *composeService) Config(ctx context.Context, project *types.Project, opt
 		if err != nil {
 			return nil, err
 		}
+		span.End()
 	}
 
+	_, marshalSpan := s.tracer.Start(ctx, "Marshal", trace.WithAttributes(attribute.String("format", options.Format)))
+	defer marshalSpan.End()
 	switch options.Format {
 	case "json":
 		return json.MarshalIndent(project, "", "  ")

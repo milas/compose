@@ -19,8 +19,9 @@ package compose
 import (
 	"context"
 
-	"github.com/docker/compose/v2/pkg/api"
 	"github.com/spf13/cobra"
+
+	"github.com/docker/compose/v2/pkg/api"
 )
 
 type startOptions struct {
@@ -43,7 +44,7 @@ func startCommand(p *ProjectOptions, backend api.Service) *cobra.Command {
 }
 
 func runStart(ctx context.Context, backend api.Service, opts startOptions, services []string) error {
-	project, name, err := opts.projectOrName(services...)
+	project, name, err := opts.projectOrName(context.TODO(), services...)
 	if err != nil {
 		return err
 	}

@@ -27,6 +27,9 @@ import (
 	"syscall"
 
 	"github.com/docker/cli/cli/command"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/compose-spec/compose-go/cli"
 	"github.com/compose-spec/compose-go/types"
@@ -119,7 +122,7 @@ func (o *ProjectOptions) WithProject(fn ProjectFunc) func(cmd *cobra.Command, ar
 // WithServices creates a cobra run command from a ProjectFunc based on configured project options and selected services
 func (o *ProjectOptions) WithServices(fn ProjectServicesFunc) func(cmd *cobra.Command, args []string) error {
 	return Adapt(func(ctx context.Context, args []string) error {
-		project, err := o.ToProject(args, cli.WithResolvedPaths(true))
+		project, err := o.ToProject(context.TODO(), args, cli.WithResolvedPaths(true))
 		if err != nil {
 			return err
 		}
@@ -139,11 +142,11 @@ func (o *ProjectOptions) addProjectFlags(f *pflag.FlagSet) {
 	_ = f.MarkHidden("workdir")
 }
 
-func (o *ProjectOptions) projectOrName(services ...string) (*types.Project, string, error) {
+func (o *ProjectOptions) projectOrName(ctx context.Context, services ...string) (*types.Project, string, error) {
 	name := o.ProjectName
 	var project *types.Project
 	if len(o.ConfigPaths) > 0 || o.ProjectName == "" {
-		p, err := o.ToProject(services)
+		p, err := o.ToProject(ctx, services)
 		if err != nil {
 			envProjectName := os.Getenv("COMPOSE_PROJECT_NAME")
 			if envProjectName != "" {
@@ -167,14 +170,32 @@ func (o *ProjectOptions) toProjectName() (string, error) {
 		return envProjectName, nil
 	}
 
-	project, err := o.ToProject(nil)
+	project, err := o.ToProject(context.TODO(), nil)
 	if err != nil {
 		return "", err
 	}
 	return project.Name, nil
 }
 
-func (o *ProjectOptions) ToProject(services []string, po ...cli.ProjectOptionsFn) (*types.Project, error) {
+func (o *ProjectOptions) ToProject(
+	ctx context.Context,
+	services []string,
+	po ...cli.ProjectOptionsFn,
+) (project *types.Project, err error) {
+	ctx, span := utils.Tracer.Start(ctx, "LoadProject",
+		trace.WithAttributes(
+			attribute.String("project_name", o.ProjectName),
+			attribute.StringSlice("profiles", o.Profiles),
+			attribute.StringSlice("config_files", o.ConfigPaths),
+		))
+	defer func() {
+		if err != nil {
+			span.SetStatus(codes.Error, "Project load failed")
+			span.RecordError(err)
+		}
+		span.End()
+	}()
+
 	options, err := o.toProjectOptions(po...)
 	if err != nil {
 		return nil, compose.WrapComposeError(err)
@@ -184,7 +205,7 @@ func (o *ProjectOptions) ToProject(services []string, po ...cli.ProjectOptionsFn
 		api.Separator = "_"
 	}
 
-	project, err := cli.ProjectFromOptions(options)
+	project, err = cli.ProjectFromOptions(options)
 	if err != nil {
 		return nil, compose.WrapComposeError(err)
 	}
@@ -192,6 +213,13 @@ func (o *ProjectOptions) ToProject(services []string, po ...cli.ProjectOptionsFn
 	if project.Name == "" {
 		return nil, errors.New("project name can't be empty. Use `--project-name` to set a valid name")
 	}
+
+	span.SetAttributes(
+		attribute.String("project_name", project.Name),
+		attribute.StringSlice("profiles", project.Profiles),
+		attribute.StringSlice("config_files", project.ComposeFiles),
+		attribute.StringSlice("services", project.ServiceNames()),
+	)
 
 	err = project.EnableServices(services...)
 	if err != nil {

@@ -19,8 +19,9 @@ package compose
 import (
 	"context"
 
-	"github.com/docker/compose/v2/pkg/api"
 	"github.com/spf13/cobra"
+
+	"github.com/docker/compose/v2/pkg/api"
 )
 
 type removeOptions struct {
@@ -59,7 +60,7 @@ Any data which is not in a volume will be lost.`,
 }
 
 func runRemove(ctx context.Context, backend api.Service, opts removeOptions, services []string) error {
-	project, name, err := opts.projectOrName(services...)
+	project, name, err := opts.projectOrName(context.TODO(), services...)
 	if err != nil {
 		return err
 	}

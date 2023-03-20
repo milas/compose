@@ -29,6 +29,7 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/docker/cli/cli"
+
 	"github.com/docker/compose/v2/pkg/api"
 	"github.com/docker/compose/v2/pkg/progress"
 	"github.com/docker/compose/v2/pkg/utils"
@@ -142,7 +143,7 @@ func runCommand(p *ProjectOptions, streams api.Streams, backend api.Service) *co
 			return nil
 		}),
 		RunE: Adapt(func(ctx context.Context, args []string) error {
-			project, err := p.ToProject([]string{opts.Service}, cgo.WithResolvedPaths(true))
+			project, err := p.ToProject(context.TODO(), []string{opts.Service}, cgo.WithResolvedPaths(true))
 			if err != nil {
 				return err
 			}

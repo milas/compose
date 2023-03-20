@@ -25,9 +25,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/docker/docker/api/types"
+
 	"github.com/docker/compose/v2/cmd/formatter"
 	"github.com/docker/compose/v2/pkg/utils"
-	"github.com/docker/docker/api/types"
 
 	formatter2 "github.com/docker/cli/cli/command/formatter"
 	"github.com/docker/go-units"
@@ -92,7 +93,7 @@ func psCommand(p *ProjectOptions, streams api.Streams, backend api.Service) *cob
 }
 
 func runPs(ctx context.Context, streams api.Streams, backend api.Service, services []string, opts psOptions) error {
-	project, name, err := opts.projectOrName(services...)
+	project, name, err := opts.projectOrName(context.TODO(), services...)
 	if err != nil {
 		return err
 	}

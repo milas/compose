@@ -53,7 +53,7 @@ func stopCommand(p *ProjectOptions, backend api.Service) *cobra.Command {
 }
 
 func runStop(ctx context.Context, backend api.Service, opts stopOptions, services []string) error {
-	project, name, err := opts.projectOrName(services...)
+	project, name, err := opts.projectOrName(context.TODO(), services...)
 	if err != nil {
 		return err
 	}

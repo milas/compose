@@ -48,14 +48,17 @@ type configOptions struct {
 	noConsistency       bool
 }
 
-func (o *configOptions) ToProject(services []string) (*types.Project, error) {
-	return o.ProjectOptions.ToProject(services,
+func (o *configOptions) ToProject(ctx context.Context, services []string) (*types.Project, error) {
+	return o.ProjectOptions.ToProject(
+		ctx,
+		services,
 		cli.WithInterpolation(!o.noInterpolate),
 		cli.WithResolvedPaths(true),
 		cli.WithNormalization(!o.noNormalize),
 		cli.WithConsistency(!o.noConsistency),
 		cli.WithProfiles(o.Profiles),
-		cli.WithDiscardEnvFile)
+		cli.WithDiscardEnvFile,
+	)
 }
 
 func convertCommand(p *ProjectOptions, streams api.Streams, backend api.Service) *cobra.Command {
@@ -120,7 +123,7 @@ func convertCommand(p *ProjectOptions, streams api.Streams, backend api.Service)
 
 func runConfig(ctx context.Context, streams api.Streams, backend api.Service, opts configOptions, services []string) error {
 	var content []byte
-	project, err := opts.ToProject(services)
+	project, err := opts.ToProject(ctx, services)
 	if err != nil {
 		return err
 	}
@@ -150,7 +153,7 @@ func runConfig(ctx context.Context, streams api.Streams, backend api.Service, op
 }
 
 func runServices(streams api.Streams, opts configOptions) error {
-	project, err := opts.ToProject(nil)
+	project, err := opts.ToProject(context.TODO(), nil)
 	if err != nil {
 		return err
 	}
@@ -161,7 +164,7 @@ func runServices(streams api.Streams, opts configOptions) error {
 }
 
 func runVolumes(streams api.Streams, opts configOptions) error {
-	project, err := opts.ToProject(nil)
+	project, err := opts.ToProject(context.TODO(), nil)
 	if err != nil {
 		return err
 	}
@@ -176,7 +179,7 @@ func runHash(streams api.Streams, opts configOptions) error {
 	if opts.hash != "*" {
 		services = append(services, strings.Split(opts.hash, ",")...)
 	}
-	project, err := opts.ToProject(nil)
+	project, err := opts.ToProject(context.TODO(), nil)
 	if err != nil {
 		return err
 	}
@@ -205,7 +208,7 @@ func runHash(streams api.Streams, opts configOptions) error {
 
 func runProfiles(streams api.Streams, opts configOptions, services []string) error {
 	set := map[string]struct{}{}
-	project, err := opts.ToProject(services)
+	project, err := opts.ToProject(context.TODO(), services)
 	if err != nil {
 		return err
 	}
@@ -226,7 +229,7 @@ func runProfiles(streams api.Streams, opts configOptions, services []string) err
 }
 
 func runConfigImages(streams api.Streams, opts configOptions, services []string) error {
-	project, err := opts.ToProject(services)
+	project, err := opts.ToProject(context.TODO(), services)
 	if err != nil {
 		return err
 	}

@@ -26,9 +26,10 @@ import (
 	"github.com/compose-spec/compose-go/loader"
 	"github.com/compose-spec/compose-go/types"
 	buildx "github.com/docker/buildx/util/progress"
+	"github.com/spf13/cobra"
+
 	"github.com/docker/compose/v2/pkg/progress"
 	"github.com/docker/compose/v2/pkg/utils"
-	"github.com/spf13/cobra"
 
 	"github.com/docker/compose/v2/pkg/api"
 )
@@ -132,7 +133,7 @@ func buildCommand(p *ProjectOptions, streams api.Streams, backend api.Service) *
 }
 
 func runBuild(ctx context.Context, backend api.Service, opts buildOptions, services []string) error {
-	project, err := opts.ToProject(services, cli.WithResolvedPaths(true))
+	project, err := opts.ToProject(context.TODO(), services, cli.WithResolvedPaths(true))
 	if err != nil {
 		return err
 	}

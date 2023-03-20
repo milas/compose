@@ -22,10 +22,11 @@ import (
 	"os"
 	"time"
 
-	"github.com/docker/compose/v2/pkg/utils"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+
+	"github.com/docker/compose/v2/pkg/utils"
 
 	"github.com/docker/compose/v2/pkg/api"
 )
@@ -78,7 +79,7 @@ func downCommand(p *ProjectOptions, backend api.Service) *cobra.Command {
 }
 
 func runDown(ctx context.Context, backend api.Service, opts downOptions) error {
-	project, name, err := opts.projectOrName()
+	project, name, err := opts.projectOrName(context.TODO())
 	if err != nil {
 		return err
 	}
