@@ -5,11 +5,11 @@ go 1.19
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.6
 	github.com/buger/goterm v1.0.4
-	github.com/compose-spec/compose-go v1.9.0
+	github.com/compose-spec/compose-go v1.13.3
 	github.com/containerd/console v1.0.3
 	github.com/containerd/containerd v1.6.16
 	github.com/cucumber/godog v0.0.0-00010101000000-000000000000
-	github.com/distribution/distribution/v3 v3.0.0-20221201083218-92d136e113cf
+	github.com/distribution/distribution/v3 v3.0.0-20230214150026-36d8c594d7aa
 	github.com/docker/buildx v0.9.1 // when updating, also update the replace rules accordingly
 	github.com/docker/cli v20.10.20+incompatible // replaced; see replace rule for actual version
 	github.com/docker/cli-docs-tool v0.5.1
@@ -30,7 +30,7 @@ require (
 	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/pflag v1.0.5
-	github.com/stretchr/testify v1.8.1
+	github.com/stretchr/testify v1.8.2
 	github.com/theupdateframework/notary v0.7.0
 	github.com/tilt-dev/fsnotify v1.4.8-0.20220602155310-fff9c274a375
 	go.opentelemetry.io/otel v1.12.0
@@ -78,7 +78,7 @@ require (
 	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
 	github.com/hashicorp/go-memdb v1.3.2 // indirect
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
-	github.com/imdario/mergo v0.3.13 // indirect
+	github.com/imdario/mergo v0.3.15 // indirect
 	github.com/inconshreveable/mousetrap v1.0.1 // indirect
 	github.com/jinzhu/gorm v1.9.11 // indirect
 	github.com/jonboulle/clockwork v0.3.1-0.20230117163003-a89700cec744
